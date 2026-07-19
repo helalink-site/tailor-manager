@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,12 +30,12 @@ table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'J
         <div class="card-body p-4">
           <h4 class="mb-1 text-center brand-title" id="brand-title">Tailor Manager</h4>
           <hr class="stitch-divider">
-          <p class="text-muted text-center small">Log in with your phone number — works for both staff and admin.</p>
+          <p class="text-muted text-center small">Log in with your email — works for both staff and admin.</p>
           <div id="error-box" class="alert alert-danger d-none"></div>
           <form id="login-form">
             <div class="mb-3">
-              <label class="form-label">Phone Number</label>
-              <input type="tel" id="phone" class="form-control" placeholder="07XXXXXXXX" required autofocus>
+              <label class="form-label">Email</label>
+              <input type="email" id="email" class="form-control" placeholder="you@example.com" required autofocus>
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
@@ -50,15 +51,10 @@ table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'J
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ---------- Supabase config: update these two lines if the project changes ----------
 const SUPABASE_URL = "https://zyzyatnnzrztdwqujkgl.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5enlhdG5uenJ6dGR3cXVqa2dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MTQ3MjksImV4cCI6MjA5OTk5MDcyOX0.-BF4qH0fVfdfxZ9IR1LzNWcFec4A6FIznBryjGywfVU";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function phoneToEmail(phone) {
-  const digits = phone.replace(/\D/g, "");
-  return `${digits}@tailor.local`;
-}
 async function getCurrentStaff() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
@@ -70,8 +66,7 @@ async function getSettings() {
   const { data } = await sb.from("system_settings").select("*").limit(1).single();
   return data || { system_name: "Tailor Manager", logo_url: null };
 }
-async function loginWithPhone(phone, password) {
-  const email = phoneToEmail(phone);
+async function loginWithEmail(email, password) {
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
@@ -89,18 +84,19 @@ async function loginWithPhone(phone, password) {
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const errorBox = document.getElementById("error-box");
   errorBox.classList.add("d-none");
   try {
-    await loginWithPhone(phone, password);
+    await loginWithEmail(email, password);
     window.location.href = "dashboard.html";
   } catch (err) {
-    errorBox.textContent = "Invalid phone number or password.";
+    errorBox.textContent = "Invalid email or password.";
     errorBox.classList.remove("d-none");
   }
 });
 </script>
 </body>
 </html>
+
