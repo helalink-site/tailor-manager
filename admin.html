@@ -56,9 +56,9 @@ table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'J
         <form id="branding-form">
           <div class="mb-2"><label class="form-label">System Name</label><input type="text" id="system_name" class="form-control"></div>
           <div class="mb-2">
-            <label class="form-label">Logo Image URL</label>
-            <input type="url" id="logo_url" class="form-control" placeholder="https://...">
-            <div class="form-text">Upload the logo anywhere and paste the direct image link here.</div>
+            <label class="form-label">Logo Image</label>
+            <input type="file" id="logo_file" class="form-control" accept="image/*">
+            <div id="logo-preview-wrap" class="mt-2"></div>
           </div>
           <button class="btn btn-dark btn-sm">Save Branding</button>
         </form>
@@ -106,6 +106,7 @@ table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'J
         <form id="staff-form">
           <div class="row g-2">
             <div class="col-6"><input type="text" id="new_name" class="form-control" placeholder="Full name" required></div>
+            <div class="col-6"><input type="email" id="new_email" class="form-control" placeholder="Email" required></div>
             <div class="col-6"><input type="text" id="new_phone" class="form-control" placeholder="Phone (07XXXXXXXX)" required></div>
             <div class="col-6"><input type="password" id="new_password" class="form-control" placeholder="Password" required></div>
             <div class="col-6">
@@ -150,15 +151,10 @@ table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'J
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ---------- Supabase config: update these two lines if the project changes ----------
 const SUPABASE_URL = "https://zyzyatnnzrztdwqujkgl.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5enlhdG5uenJ6dGR3cXVqa2dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MTQ3MjksImV4cCI6MjA5OTk5MDcyOX0.-BF4qH0fVfdfxZ9IR1LzNWcFec4A6FIznBryjGywfVU";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function phoneToEmail(phone) {
-  const digits = phone.replace(/\D/g, "");
-  return `${digits}@tailor.local`;
-}
 async function logout() {
   await sb.auth.signOut();
   window.location.href = "index.html";
@@ -190,7 +186,7 @@ async function renderNav(staff) {
     <nav class="navbar navbar-dark navbar-expand-lg">
       <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center gap-2 brand-title" href="dashboard.html">
-          ${settings.logo_url ? `<img src="${settings.logo_url}" height="30">` : "&#9986;"}
+          ${settings.logo_url ? `<img src="${settings.logo_url}" height="30" style="border-radius:4px;">` : "&#9986;"}
           ${settings.system_name}
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -213,7 +209,7 @@ async function renderNav(staff) {
                 <li class="text-muted small px-2">Loading...</li>
               </ul>
             </li>
-            <li class="nav-item"><span class="nav-link text-light-emphasis small">${staff.name}</span></li>
+            <li class="nav-item"><a class="nav-link" href="profile.html">${staff.avatar_url ? `<img src="${staff.avatar_url}" height="24" style="border-radius:50%;object-fit:cover;width:24px;">` : ""} ${staff.name}</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Logout</a></li>
           </ul>
         </div>
@@ -315,7 +311,8 @@ async function init() {
 
   const settings = await getSettings();
   document.getElementById("system_name").value = settings.system_name || "";
-  document.getElementById("logo_url").value = settings.logo_url || "";
+  document.getElementById("logo-preview-wrap").innerHTML = settings.logo_url
+    ? `<img src="${settings.logo_url}" height="50" style="border-radius:4px;">` : "";
   document.getElementById("workers_can_view_payments").checked = !!settings.workers_can_view_payments;
   document.getElementById("workers_can_view_financials").checked = !!settings.workers_can_view_financials;
   document.getElementById("daily_reminder_time").value = (settings.daily_reminder_time || "18:00").slice(0,5);
@@ -327,10 +324,27 @@ async function init() {
 
 document.getElementById("branding-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const { data: existing } = await sb.from("system_settings").select("id").limit(1).single();
+  const { data: existing } = await sb.from("system_settings").select("*").limit(1).single();
+  let logoUrl = existing.logo_url;
+
+  const file = document.getElementById("logo_file").files[0];
+  if (file) {
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `branding/logo-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await sb.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = sb.storage.from("public-assets").getPublicUrl(path);
+      logoUrl = urlData.publicUrl;
+    } catch (err) {
+      alert("Logo upload failed: " + err.message);
+      return;
+    }
+  }
+
   await sb.from("system_settings").update({
     system_name: document.getElementById("system_name").value.trim(),
-    logo_url: document.getElementById("logo_url").value.trim() || null,
+    logo_url: logoUrl,
   }).eq("id", existing.id);
   alert("Branding updated.");
   location.reload();
@@ -366,6 +380,7 @@ document.getElementById("staff-form").addEventListener("submit", async (e) => {
       },
       body: JSON.stringify({
         name: document.getElementById("new_name").value.trim(),
+        email: document.getElementById("new_email").value.trim(),
         phone: document.getElementById("new_phone").value.trim(),
         password: document.getElementById("new_password").value,
         role: document.getElementById("new_role").value,
