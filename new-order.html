@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{--paper:#F3EEE4;--ink:#211D1A;--thread:#7A2E33;--thread-dark:#5E2227;--brass:#B7924B;--slate:#5B6560;--sage:#4F7A5B;--rust:#B5542A;}
+body{background:var(--paper);color:var(--ink);font-family:'Work Sans',sans-serif;}
+h1,h2,h3,h4,h5,h6{font-family:'Fraunces',serif;}
+table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'JetBrains Mono',monospace;}
+.brand-title{font-style:italic;font-weight:700;}
+.card{background:#fff;border:none;border-radius:6px;box-shadow:0 1px 3px rgba(33,29,26,.08);}
+.btn-dark{background:var(--thread);border-color:var(--thread);border-radius:999px;font-weight:600;letter-spacing:.02em;}
+.btn-dark:hover{background:var(--thread-dark);border-color:var(--thread-dark);}
+.btn-success{background:var(--sage);border-color:var(--sage);border-radius:999px;}
+.btn-outline-dark{border-color:var(--ink);color:var(--ink);border-radius:999px;}
+.form-control,.form-select{border-radius:8px;border:1px solid #DDD4C4;background:#FFFDF9;}
+.form-control:focus,.form-select:focus{border-color:var(--thread);box-shadow:0 0 0 .2rem rgba(122,46,51,.12);}
+.navbar{background:var(--ink)!important;}
+.navbar-brand{color:var(--paper)!important;}
+.nav-link{color:var(--paper)!important;opacity:.85;}
+.nav-link:hover{opacity:1;color:var(--brass)!important;}
+.page-title{font-style:italic;font-weight:700;margin-bottom:1.25rem;}
+.accordion-button:not(.collapsed){background:rgba(122,46,51,.06);color:var(--thread-dark);}
+.accordion-button:focus{box-shadow:none;}
+.table thead th{font-family:'Work Sans',sans-serif;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);border-bottom:2px solid var(--brass)!important;}
+.badge.bg-success{background-color:var(--sage)!important;}
+.badge.bg-secondary{background-color:var(--slate)!important;}
+.badge.bg-warning{background-color:var(--brass)!important;color:var(--ink)!important;}
+.badge.bg-danger{background-color:var(--rust)!important;}
+@media (max-width: 576px){
+  .container{padding-left:12px;padding-right:12px;}
+  h3{font-size:1.25rem;}
+  .table{font-size:.85rem;}
+  .card{padding:.75rem!important;}
+  .navbar-brand{font-size:1rem;}
+  #notif-dropdown{min-width:260px!important;}
+}
+.table-responsive .table{white-space:nowrap;}
+.table-responsive .table td small{white-space:normal;}
+.template-tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:.25em .7em;border-radius:999px;margin-left:.5rem;}
+.template-upper{background:#E9DCE0;color:var(--thread);}
+.template-lower{background:#E4EEE8;color:#3f6249;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="container py-4">
+  <h3 class="page-title">New Order</h3>
+  <div id="error-box" class="alert alert-danger d-none"></div>
+  <form id="order-form" class="card p-4 shadow-sm bg-white">
+    <h6 class="text-muted">Customer</h6>
+    <div class="row mb-3">
+      <div class="col-md-6"><label class="form-label">Customer Name</label><input type="text" id="customer_name" class="form-control" required></div>
+      <div class="col-md-6"><label class="form-label">Phone Number</label><input type="text" id="customer_phone" class="form-control" placeholder="07XXXXXXXX" required></div>
+    </div>
+
+    <h6 class="text-muted">Order Details</h6>
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Clothe to be made</label>
+        <select id="garment_type" class="form-select" required>
+          <option value="">-- Select garment type --</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label">Material Type</label><input type="text" id="material_type" class="form-control" placeholder="e.g. Wool, Cotton"></div>
+      <div class="col-md-3"><label class="form-label">Material Color</label><input type="text" id="material_color" class="form-control" placeholder="e.g. Navy Blue"></div>
+    </div>
+
+    <div class="mb-3" id="custom-garment-wrap" style="display:none;">
+      <label class="form-label">Garment Name</label>
+      <input type="text" id="custom_garment_name" class="form-control" placeholder="e.g. Kaftan">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Measurements <span id="template-badge"></span></label>
+      <div id="measurement-fields" class="row g-2">
+        <p class="text-muted small mb-0">Select a garment type above to show its measurement fields.</p>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Assign To (worker doing this job)</label>
+        <select id="assigned_to" class="form-select" required></select>
+      </div>
+    </div>
+
+    <h6 class="text-muted">Payment & Date</h6>
+    <div class="row mb-3">
+      <div class="col-md-4"><label class="form-label">Total Amount (KES)</label><input type="number" step="0.01" id="total_amount" class="form-control" required></div>
+      <div class="col-md-4"><label class="form-label">Deposit Paid Now (KES)</label><input type="number" step="0.01" id="deposit_amount" class="form-control" value="0"></div>
+      <div class="col-md-4"><label class="form-label">Agreed Completion Date</label><input type="date" id="due_date" class="form-control"></div>
+    </div>
+
+    <button class="btn btn-dark" type="submit">Save & Assign Task</button>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---------- Supabase config: update these two lines if the project changes ----------
+const SUPABASE_URL = "https://zyzyatnnzrztdwqujkgl.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5enlhdG5uenJ6dGR3cXVqa2dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MTQ3MjksImV4cCI6MjA5OTk5MDcyOX0.-BF4qH0fVfdfxZ9IR1LzNWcFec4A6FIznBryjGywfVU";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function phoneToEmail(phone) {
+  const digits = phone.replace(/\D/g, "");
+  return `${digits}@tailor.local`;
+}
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = "index.html";
+}
+async function getCurrentStaff() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return null;
+  const { data, error } = await sb.from("staff").select("*").eq("id", session.user.id).single();
+  if (error || !data || !data.active) return null;
+  return data;
+}
+async function requireAuth({ adminOnly = false } = {}) {
+  const staff = await getCurrentStaff();
+  if (!staff) { window.location.href = "index.html"; return null; }
+  if (adminOnly && staff.role !== "admin") { window.location.href = "dashboard.html"; return null; }
+  return staff;
+}
+async function getSettings() {
+  const { data } = await sb.from("system_settings").select("*").limit(1).single();
+  return data || { system_name: "Tailor Manager", logo_url: null };
+}
+function orderNo(id) {
+  return String(id).padStart(3, "0");
+}
+
+async function renderNav(staff) {
+  const settings = await getSettings();
+  document.title = settings.system_name;
+  const isAdmin = staff.role === "admin";
+  const showFinancials = isAdmin || settings.workers_can_view_financials;
+  const navHtml = `
+    <nav class="navbar navbar-dark navbar-expand-lg">
+      <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center gap-2 brand-title" href="dashboard.html">
+          ${settings.logo_url ? `<img src="${settings.logo_url}" height="30" style="border-radius:4px;">` : "&#9986;"}
+          ${settings.system_name}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="orders.html">Orders</a></li>
+            <li class="nav-item"><a class="nav-link" href="trash.html">Trash</a></li>
+            ${isAdmin ? `<li class="nav-item"><a class="nav-link" href="new-order.html">+ New Order</a></li>` : ""}
+            ${showFinancials ? `<li class="nav-item"><a class="nav-link" href="financials.html">Financials</a></li>` : ""}
+            ${isAdmin ? `<li class="nav-item"><a class="nav-link" href="admin.html">Admin Settings</a></li>` : ""}
+          </ul>
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item dropdown">
+              <a class="nav-link position-relative" href="#" id="bell" role="button" data-bs-toggle="dropdown">
+                &#128276;<span id="badge-count" class="badge rounded-pill bg-danger position-absolute d-none" style="top:0;right:0;font-size:.65rem;"></span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:320px;max-height:400px;overflow-y:auto;" id="notif-dropdown">
+                <li class="text-muted small px-2">Loading...</li>
+              </ul>
+            </li>
+            <li class="nav-item"><a class="nav-link" href="profile.html">${staff.avatar_url ? `<img src="${staff.avatar_url}" height="24" style="border-radius:50%;object-fit:cover;width:24px;">` : ""} ${staff.name}</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>`;
+  document.getElementById("nav-container").innerHTML = navHtml;
+  initNotifications(staff.id);
+}
+
+async function loadNotifications(staffId) {
+  const { data: notes } = await sb.from("notifications").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(10);
+  const { count: unread } = await sb.from("notifications").select("*", { count: "exact", head: true }).eq("staff_id", staffId).eq("is_read", false);
+  const badge = document.getElementById("badge-count");
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove("d-none"); }
+  else { badge.classList.add("d-none"); }
+  const dropdown = document.getElementById("notif-dropdown");
+  if (!notes || notes.length === 0) { dropdown.innerHTML = `<li class="text-muted small px-2">No notifications yet.</li>`; return; }
+  dropdown.innerHTML = notes.map(n => `
+    <li class="px-2 py-1 border-bottom ${n.is_read ? "" : "fw-bold"}" style="cursor:pointer;font-size:.85rem;" onclick="openNotification(${n.id}, ${n.order_id ?? "null"})">
+      ${n.message}
+      <div class="small text-muted fw-normal">${new Date(n.created_at).toLocaleString()}</div>
+    </li>`).join("");
+}
+async function openNotification(id, orderId) {
+  await sb.from("notifications").update({ is_read: true }).eq("id", id);
+  window.location.href = orderId ? `order.html?id=${orderId}` : "dashboard.html";
+}
+function initNotifications(staffId) {
+  loadNotifications(staffId);
+  sb.channel("notifications-" + staffId)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `staff_id=eq.${staffId}` }, () => loadNotifications(staffId))
+    .subscribe();
+}
+
+const MEASUREMENT_TEMPLATES = {
+  upper: ["Bust Chest", "Bodice", "Shoulder", "Sleeves", "Waist", "Hips"],
+  lower: ["Waist", "Thigh", "Bottom", "Fly", "Length", "Hips", "Knee"],
+};
+const GARMENT_TYPES = {
+  "Coat": { fields: MEASUREMENT_TEMPLATES.upper, template: "upper" },
+  "Shirt": { fields: MEASUREMENT_TEMPLATES.upper, template: "upper" },
+  "Suit (Jacket)": { fields: MEASUREMENT_TEMPLATES.upper, template: "upper" },
+  "Blouse": { fields: MEASUREMENT_TEMPLATES.upper, template: "upper" },
+  "Dress": { fields: MEASUREMENT_TEMPLATES.upper, template: "upper" },
+  "Trouser": { fields: MEASUREMENT_TEMPLATES.lower, template: "lower" },
+  "Skirt": { fields: MEASUREMENT_TEMPLATES.lower, template: "lower" },
+  "Shorts": { fields: MEASUREMENT_TEMPLATES.lower, template: "lower" },
+  "Other": { fields: [], template: null },
+};
+
+function populateGarmentDropdown(selectEl) {
+  Object.keys(GARMENT_TYPES).forEach(type => {
+    const opt = document.createElement("option");
+    opt.value = type; opt.textContent = type;
+    selectEl.appendChild(opt);
+  });
+}
+
+function renderMeasurementFields(garmentType, container) {
+  const badge = document.getElementById("template-badge");
+  container.innerHTML = "";
+  if (badge) badge.innerHTML = "";
+
+  const entry = GARMENT_TYPES[garmentType];
+  if (!entry) return;
+
+  const extraNotesHtml = `
+    <div class="col-12 mt-2">
+      <label class="form-label small mb-1">Extra / Other Measurements (optional)</label>
+      <textarea class="form-control form-control-sm measurement-extra" rows="2" placeholder="Any other numbers or shorthand, e.g. 2x3, 17, 45 ..."></textarea>
+    </div>`;
+
+  if (garmentType === "Other" || entry.fields.length === 0) {
+    container.innerHTML = `<div class="col-12"><textarea class="form-control measurement-freeform" rows="3" placeholder="List measurements, e.g. Chest: 40, Waist: 34 ..."></textarea></div>` + extraNotesHtml;
+    return;
+  }
+
+  if (badge) {
+    badge.innerHTML = `<span class="template-tag template-${entry.template}">${entry.template === "upper" ? "Coat & Shirts template" : "Trousers/Skirt/Shorts template"}</span>`;
+  }
+  container.innerHTML = entry.fields.map(label => `
+    <div class="col-md-3 col-6">
+      <label class="form-label small mb-1">${label}</label>
+      <input type="text" inputmode="decimal" class="form-control form-control-sm measurement-field" data-label="${label}" placeholder="e.g. 23, 3 by 4, or 3/6">
+    </div>`).join("") + extraNotesHtml;
+}
+
+function collectMeasurements(container) {
+  const freeform = container.querySelector(".measurement-freeform");
+  const extra = container.querySelector(".measurement-extra");
+  if (freeform) {
+    const result = { __freeform: freeform.value };
+    if (extra && extra.value.trim()) result.__extra = extra.value.trim();
+    return result;
+  }
+  const result = {};
+  container.querySelectorAll(".measurement-field").forEach(input => {
+    if (input.value !== "") result[input.dataset.label] = input.value;
+  });
+  if (extra && extra.value.trim()) result.__extra = extra.value.trim();
+  return result;
+}
+
+let staff = null;
+
+(async () => {
+  staff = await requireAuth({ adminOnly: true });
+  if (!staff) return;
+  renderNav(staff);
+
+  const garmentSelect = document.getElementById("garment_type");
+  populateGarmentDropdown(garmentSelect);
+  const measurementContainer = document.getElementById("measurement-fields");
+  garmentSelect.addEventListener("change", () => {
+    renderMeasurementFields(garmentSelect.value, measurementContainer);
+    document.getElementById("custom-garment-wrap").style.display = garmentSelect.value === "Other" ? "block" : "none";
+  });
+
+  const { data: workers } = await sb.from("staff").select("*").eq("active", true).order("name");
+  const { data: pendingOrders } = await sb.from("orders").select("assigned_to").neq("status", "completed");
+  const pendingCount = {};
+  (pendingOrders || []).forEach(o => { pendingCount[o.assigned_to] = (pendingCount[o.assigned_to] || 0) + 1; });
+
+  document.getElementById("assigned_to").innerHTML = workers
+    .map(w => `<option value="${w.id}">${w.name} (${w.phone}) — ${pendingCount[w.id] || 0} pending</option>`).join("");
+})();
+
+document.getElementById("order-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorBox = document.getElementById("error-box");
+  errorBox.classList.add("d-none");
+
+  const name = document.getElementById("customer_name").value.trim();
+  const phone = document.getElementById("customer_phone").value.trim();
+
+  try {
+    let { data: customer } = await sb.from("customers").select("*").eq("phone", phone).maybeSingle();
+    if (!customer) {
+      const { data: newCust, error: custErr } = await sb.from("customers").insert({ name, phone }).select().single();
+      if (custErr) throw custErr;
+      customer = newCust;
+    }
+
+    const dueDate = document.getElementById("due_date").value || null;
+    const totalAmount = parseFloat(document.getElementById("total_amount").value) || 0;
+    const deposit = parseFloat(document.getElementById("deposit_amount").value) || 0;
+
+    const garmentSelectVal = document.getElementById("garment_type").value;
+    const garmentType = garmentSelectVal === "Other"
+      ? (document.getElementById("custom_garment_name").value.trim() || "Other")
+      : garmentSelectVal;
+
+    const measurementsObj = collectMeasurements(document.getElementById("measurement-fields"));
+
+    const { data: order, error: orderErr } = await sb.from("orders").insert({
+      customer_id: customer.id,
+      handled_by: staff.id,
+      assigned_to: document.getElementById("assigned_to").value,
+      garment_type: garmentType,
+      material_type: document.getElementById("material_type").value,
+      material_color: document.getElementById("material_color").value,
+      measurements: JSON.stringify(measurementsObj),
+      total_amount: totalAmount,
+      due_date: dueDate,
+    }).select().single();
+    if (orderErr) throw orderErr;
+
+    if (deposit > 0) {
+      const { error: payErr } = await sb.from("payments").insert({ order_id: order.id, amount: deposit, method: "cash", recorded_by: staff.id });
+      if (payErr) throw payErr;
+    }
+
+    window.location.href = `order.html?id=${order.id}`;
+  } catch (err) {
+    console.error(err);
+    errorBox.textContent = "Something went wrong: " + (err.message || "please try again.");
+    errorBox.classList.remove("d-none");
+  }
+});
+</script>
+</body>
+</html>
