@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{--paper:#F3EEE4;--ink:#211D1A;--thread:#7A2E33;--thread-dark:#5E2227;--brass:#B7924B;--slate:#5B6560;--sage:#4F7A5B;--rust:#B5542A;}
+body{background:var(--paper);color:var(--ink);font-family:'Work Sans',sans-serif;}
+h1,h2,h3,h4,h5,h6{font-family:'Fraunces',serif;}
+table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'JetBrains Mono',monospace;}
+.brand-title{font-weight:700;}
+.card{background:#fff;border:none;border-radius:6px;box-shadow:0 4px 10px rgba(33,29,26,.10);}
+.btn-dark{background:var(--thread);border-color:var(--thread);border-radius:999px;font-weight:600;letter-spacing:.02em;}
+.btn-dark:hover{background:var(--thread-dark);border-color:var(--thread-dark);}
+.btn-success{background:var(--sage);border-color:var(--sage);border-radius:999px;}
+.btn-outline-dark{border-color:var(--ink);color:var(--ink);border-radius:999px;}
+.form-control,.form-select{border-radius:8px;border:1px solid #DDD4C4;background:#FFFDF9;}
+.form-control:focus,.form-select:focus{border-color:var(--thread);box-shadow:0 0 0 .2rem rgba(122,46,51,.12);}
+.navbar{background:var(--ink)!important;}
+.navbar-brand{color:var(--paper)!important;}
+.nav-link{color:var(--paper)!important;opacity:.85;}
+.nav-link:hover{opacity:1;color:var(--brass)!important;}
+.page-title{font-weight:700;margin-bottom:1.25rem;}
+.accordion-button:not(.collapsed){background:rgba(122,46,51,.06);color:var(--thread-dark);}
+.accordion-button:focus{box-shadow:none;}
+.table thead th{font-family:'Work Sans',sans-serif;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);border-bottom:2px solid var(--brass)!important;}
+.badge.bg-success{background-color:var(--sage)!important;}
+.badge.bg-secondary{background-color:var(--slate)!important;}
+.badge.bg-warning{background-color:var(--brass)!important;color:var(--ink)!important;}
+.badge.bg-danger{background-color:var(--rust)!important;}
+@media (max-width: 576px){
+  .container{padding-left:12px;padding-right:12px;}
+  h3{font-size:1.25rem;}
+  .table{font-size:.85rem;}
+  .card{padding:.75rem!important;}
+  .navbar-brand{font-size:1rem;}
+  #notif-dropdown{min-width:260px!important;}
+}
+.table-responsive .table{white-space:nowrap;}
+.table-responsive .table td small{white-space:normal;}
+.nav-scroll{overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.nav-scroll::-webkit-scrollbar{display:none;}
+.nav-pill{display:inline-block;color:var(--paper);opacity:.8;text-decoration:none;padding:.4rem .75rem;border-radius:999px;font-size:.85rem;margin-right:.25rem;white-space:nowrap;}
+.nav-pill:hover{opacity:1;background:rgba(255,255,255,.08);}
+.nav-pill.active{opacity:1;background:rgba(255,255,255,.15);color:#fff;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="container py-4">
+  <h3 class="page-title">Dashboard</h3>
+  <p class="text-muted" id="total-line"></p>
+  <input type="text" id="search" class="form-control mb-3" placeholder="Search by order no, customer name, or phone">
+  <div class="table-responsive"><table class="table bg-white">
+    <thead><tr><th>Order No</th><th>Customer</th><th>Garment</th><th>Due</th><th>Payment</th><th>Work</th><th></th></tr></thead>
+    <tbody id="orders-body"></tbody>
+  </table></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---------- Supabase config: update these two lines if the project changes ----------
+const SUPABASE_URL = "https://zyzyatnnzrztdwqujkgl.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5enlhdG5uenJ6dGR3cXVqa2dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MTQ3MjksImV4cCI6MjA5OTk5MDcyOX0.-BF4qH0fVfdfxZ9IR1LzNWcFec4A6FIznBryjGywfVU";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function phoneToEmail(phone) {
+  const digits = phone.replace(/\D/g, "");
+  return `${digits}@tailor.local`;
+}
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = "index.html";
+}
+async function getCurrentStaff() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return null;
+  const { data, error } = await sb.from("staff").select("*").eq("id", session.user.id).single();
+  if (error || !data || !data.active) return null;
+  return data;
+}
+async function requireAuth({ adminOnly = false } = {}) {
+  const staff = await getCurrentStaff();
+  if (!staff) { window.location.href = "index.html"; return null; }
+  if (adminOnly && staff.role !== "admin") { window.location.href = "dashboard.html"; return null; }
+  return staff;
+}
+async function getSettings() {
+  const { data } = await sb.from("system_settings").select("*").limit(1).single();
+  return data || { system_name: "Tailor Manager", logo_url: null };
+}
+function orderNo(id) {
+  return String(id).padStart(3, "0");
+}
+
+async function renderNav(staff) {
+  const settings = await getSettings();
+  document.title = settings.system_name;
+  const isAdmin = staff.role === "admin";
+  const showFinancials = isAdmin || settings.workers_can_view_financials;
+  const currentPage = window.location.pathname.split("/").pop();
+
+  const links = [
+    { href: "dashboard.html", label: "Dashboard", show: true },
+    { href: "orders.html", label: "Orders", show: true },
+    { href: "trash.html", label: "Trash", show: true },
+    { href: "new-order.html", label: "+ New Order", show: isAdmin || settings.workers_can_create_orders },
+    { href: "financials.html", label: "Financials", show: showFinancials },
+    { href: "admin.html", label: "Admin Settings", show: isAdmin },
+  ];
+
+  const linksHtml = links.filter(l => l.show).map(l =>
+    `<a class="nav-pill${currentPage === l.href ? " active" : ""}" href="${l.href}">${l.label}</a>`
+  ).join("");
+
+  const navHtml = `
+    <nav class="navbar navbar-dark">
+      <div class="container-fluid d-flex align-items-center flex-nowrap gap-2">
+        <a class="navbar-brand d-flex align-items-center gap-2 brand-title flex-shrink-0" href="dashboard.html">
+          ${settings.logo_url ? `<img src="${settings.logo_url}" height="30" style="border-radius:4px;">` : "&#9986;"}
+          ${settings.system_name}
+        </a>
+        <div class="nav-scroll d-flex align-items-center flex-grow-1">${linksHtml}</div>
+        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+          <div class="dropdown">
+            <a class="nav-link position-relative" href="#" id="bell" role="button" data-bs-toggle="dropdown" onclick="markAllAsRead()">
+              &#128276;<span id="badge-count" class="badge rounded-pill bg-danger position-absolute d-none" style="top:0;right:0;font-size:.65rem;"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:320px;max-height:400px;overflow-y:auto;" id="notif-dropdown">
+              <li class="text-muted small px-2">Loading...</li>
+            </ul>
+          </div>
+          <a class="nav-link" href="profile.html">${staff.avatar_url ? `<img src="${staff.avatar_url}" height="24" style="border-radius:50%;object-fit:cover;width:24px;">` : ""} ${staff.name}</a>
+          <a class="nav-link" href="#" onclick="logout()">Logout</a>
+        </div>
+      </div>
+    </nav>`;
+  document.getElementById("nav-container").innerHTML = navHtml;
+  initNotifications(staff.id);
+}
+
+let currentNotifStaffId = null;
+
+async function loadNotifications(staffId) {
+  currentNotifStaffId = staffId;
+  const { data: notes } = await sb.from("notifications").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(15);
+  const { count: unread } = await sb.from("notifications").select("*", { count: "exact", head: true }).eq("staff_id", staffId).eq("is_read", false);
+  const badge = document.getElementById("badge-count");
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove("d-none"); }
+  else { badge.classList.add("d-none"); }
+  const dropdown = document.getElementById("notif-dropdown");
+  if (!notes || notes.length === 0) { dropdown.innerHTML = `<li class="text-muted small px-2">No notifications yet.</li>`; return; }
+  const clearBtn = `<li class="px-2 pb-2 mb-1 border-bottom"><button class="btn btn-sm btn-outline-dark w-100" onclick="clearAllNotifications()">Clear All</button></li>`;
+  dropdown.innerHTML = clearBtn + notes.map(n => `
+    <li class="px-2 py-1 border-bottom ${n.is_read ? "" : "fw-bold"}" style="cursor:pointer;font-size:.85rem;" onclick="openNotification(${n.id}, ${n.order_id ?? "null"})">
+      ${n.message}
+      <div class="small text-muted fw-normal">${new Date(n.created_at).toLocaleString()}</div>
+    </li>`).join("");
+}
+async function openNotification(id, orderId) {
+  await sb.from("notifications").update({ is_read: true }).eq("id", id);
+  window.location.href = orderId ? `order.html?id=${orderId}` : "dashboard.html";
+}
+async function markAllAsRead() {
+  if (!currentNotifStaffId) return;
+  const badge = document.getElementById("badge-count");
+  if (badge) badge.classList.add("d-none");
+  await sb.from("notifications").update({ is_read: true }).eq("staff_id", currentNotifStaffId).eq("is_read", false);
+  loadNotifications(currentNotifStaffId);
+}
+async function clearAllNotifications() {
+  if (!currentNotifStaffId) return;
+  if (!confirm("Clear all notifications? This can't be undone.")) return;
+  await sb.from("notifications").delete().eq("staff_id", currentNotifStaffId);
+  loadNotifications(currentNotifStaffId);
+}
+function initNotifications(staffId) {
+  loadNotifications(staffId);
+  sb.channel("notifications-" + staffId)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `staff_id=eq.${staffId}` }, () => loadNotifications(staffId))
+    .subscribe();
+}
+
+let allOrders = [];
+let showPayments = true;
+let isAdmin = false;
+let canMarkDone = false;
+let canMarkCollected = false;
+
+function rowHtml(o) {
+  const dueStr = o.due_date ? new Date(o.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const today = new Date(); today.setHours(0,0,0,0);
+  let dueClass = "";
+  if (o.due_date) {
+    const d = new Date(o.due_date); d.setHours(0,0,0,0);
+    if (d < today) dueClass = "text-danger fw-bold";
+    else if (d.getTime() === today.getTime()) dueClass = "fw-bold";
+    else dueClass = ""; // brass-ish handled by badge, keep due date plain otherwise
+  }
+
+  let payBadge = `<span class="text-muted small">Not visible</span>`;
+  if (showPayments) {
+    if (o.balance <= 0) payBadge = `<span class="badge bg-success">Paid</span>`;
+    else if (o.total_paid > 0) payBadge = `<span class="badge bg-warning text-dark">Partial — Bal KES ${o.balance.toFixed(0)}</span>`;
+    else payBadge = `<span class="badge bg-danger">Unpaid — KES ${o.balance.toFixed(0)}</span>`;
+  }
+
+  const workBadge = o.status === "ready"
+    ? `<span class="badge bg-warning text-dark">Ready for collection</span>`
+    : `<span class="badge bg-secondary">Pending</span>`;
+
+  let actions = "";
+  if (o.status === "pending" && canMarkDone) {
+    actions = `<button class="btn btn-sm btn-outline-dark" onclick="event.stopPropagation(); markDone(${o.id})">Mark Done</button>`;
+  } else if (o.status === "ready" && canMarkCollected) {
+    actions = `<button class="btn btn-sm btn-success" onclick="event.stopPropagation(); markCollected(${o.id})">Mark Collected</button>`;
+  }
+
+  return `<tr onclick="window.location='order.html?id=${o.id}'" style="cursor:pointer;">
+    <td>#${orderNo(o.id)}</td>
+    <td>${o.customers.name}<br><small class="text-muted">${o.customers.phone}</small></td>
+    <td>${o.garment_type}</td>
+    <td class="${dueClass}">${dueStr}</td>
+    <td>${payBadge}</td>
+    <td>${workBadge}</td>
+    <td>${actions}</td>
+  </tr>`;
+}
+
+function renderList(list) {
+  document.getElementById("orders-body").innerHTML = list.map(rowHtml).join("")
+    || `<tr><td colspan="7" class="text-center text-muted p-4">No unfinished orders.</td></tr>`;
+}
+
+async function markDone(id) {
+  await sb.from("orders").update({ status: "ready" }).eq("id", id);
+  loadDashboard();
+}
+async function markCollected(id) {
+  await sb.from("orders").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", id);
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  const { data: orders, error } = await sb
+    .from("orders")
+    .select("*, customers(name,phone), staff:handled_by(name), payments(amount)")
+    .neq("status", "completed");
+
+  if (error) { console.error(error); return; }
+
+  const enriched = orders.map(o => {
+    const total_paid = (o.payments || []).reduce((s, p) => s + Number(p.amount), 0);
+    return { ...o, total_paid, balance: Number(o.total_amount) - total_paid };
+  });
+
+  // sort ascending by due date, soonest/most overdue first, no-due-date last
+  enriched.sort((a, b) => {
+    if (!a.due_date && !b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return new Date(a.due_date) - new Date(b.due_date);
+  });
+
+  allOrders = enriched;
+  document.getElementById("total-line").textContent = `${enriched.length} unfinished job(s) total.`;
+  renderList(allOrders);
+}
+
+(async () => {
+  const staff = await requireAuth();
+  if (!staff) return;
+  renderNav(staff);
+  isAdmin = staff.role === "admin";
+  const settings = await getSettings();
+  showPayments = isAdmin || settings.workers_can_view_payments;
+  canMarkDone = isAdmin || settings.workers_can_mark_done;
+  canMarkCollected = isAdmin || settings.workers_can_mark_collected;
+
+  sb.rpc("run_daily_reminder");
+
+  await loadDashboard();
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const q = e.target.value.toLowerCase();
+    renderList(allOrders.filter(o =>
+      o.customers.name.toLowerCase().includes(q) ||
+      o.customers.phone.includes(q) ||
+      orderNo(o.id).includes(q) ||
+      String(o.id).includes(q)
+    ));
+  });
+})();
+</script>
+</body>
+</html>
