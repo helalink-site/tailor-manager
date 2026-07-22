@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{--paper:#14151A;--ink:#F1EFE8;--thread:#D4AF37;--thread-dark:#B8912A;--brass:#E9CE72;--slate:#9AA0AC;--sage:#4F9A6B;--rust:#C0524A;--panel:#1D1F26;--panel-light:#23252E;--border-soft:rgba(212,175,55,.18);}
+body{background:var(--paper);color:var(--ink);font-family:'Work Sans',sans-serif;}
+h1,h2,h3,h4,h5,h6{font-family:'Fraunces',serif;}
+table,.badge,input[type=number],input[type=date],input[type=time]{font-family:'JetBrains Mono',monospace;}
+.brand-title{font-weight:700;}
+.topbar{background:var(--panel);display:flex;align-items:center;gap:.65rem;padding:.7rem 1rem;box-shadow:0 2px 10px rgba(0,0,0,.4);position:sticky;top:0;z-index:1030;}
+.hamburger-btn{background:none;border:none;color:var(--brass);font-size:1.45rem;cursor:pointer;line-height:1;padding:.15rem .35rem;}
+.topbar-brand{font-weight:700;color:var(--brass);font-size:1rem;display:flex;align-items:center;gap:.5rem;text-decoration:none;}
+.topbar-brand img{height:30px;width:30px;border-radius:7px;object-fit:cover;background:#fff;padding:2px;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:.85rem;}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:1039;}
+.sidebar-overlay.show{opacity:1;pointer-events:auto;}
+.app-sidebar{position:fixed;top:0;left:0;bottom:0;width:250px;background:var(--panel);transform:translateX(-100%);transition:transform .28s ease;z-index:1040;display:flex;flex-direction:column;padding:1.1rem 0;box-shadow:6px 0 24px rgba(0,0,0,.5);overflow-y:auto;}
+.app-sidebar.show{transform:translateX(0);}
+.sidebar-brand{font-weight:700;color:var(--brass);font-size:1rem;padding:0 1.15rem 1.1rem;display:flex;align-items:center;gap:.55rem;border-bottom:1px solid var(--border-soft);margin-bottom:.6rem;}
+.sidebar-brand img{height:38px;width:38px;border-radius:9px;object-fit:cover;background:#fff;padding:2px;}
+.app-sidebar a.side-link{display:flex;align-items:center;gap:.65rem;color:var(--slate);text-decoration:none;padding:.6rem 1.15rem;font-size:.9rem;font-weight:500;border-left:3px solid transparent;}
+.app-sidebar a.side-link:hover{background:var(--panel-light);color:var(--ink);}
+.app-sidebar a.side-link.active{color:var(--brass);background:var(--panel-light);border-left-color:var(--thread);font-weight:600;}
+.sidebar-footer{margin-top:auto;padding-top:.6rem;border-top:1px solid var(--border-soft);}
+.sidebar-footer a.side-link{padding:.55rem 1.15rem;}
+.nav-link{color:var(--ink)!important;}
+
+.bg-white{background:var(--panel)!important;color:var(--ink);}
+.table{color:var(--ink);}
+.table thead th{border-bottom-color:var(--border-soft)!important;color:var(--brass);}
+.table td, .table th{border-color:rgba(255,255,255,.06);}
+.form-control,.form-select{background:var(--panel-light)!important;color:var(--ink)!important;border-color:var(--border-soft)!important;}
+.form-control::placeholder{color:var(--slate);}
+.form-control:focus,.form-select:focus{border-color:var(--thread)!important;box-shadow:0 0 0 .2rem rgba(212,175,55,.15)!important;}
+.dropdown-menu{background:var(--panel);border-color:var(--border-soft);}
+.dropdown-item{color:var(--ink);}
+.dropdown-item:hover{background:var(--panel-light);color:var(--brass);}
+.text-muted{color:var(--slate)!important;}
+.btn-dark{background:var(--thread)!important;border-color:var(--thread)!important;color:#14151A!important;}
+.btn-dark:hover{background:var(--thread-dark)!important;border-color:var(--thread-dark)!important;}
+.btn-outline-dark{color:var(--brass)!important;border-color:var(--brass)!important;}
+.btn-outline-dark:hover{background:var(--brass)!important;color:#14151A!important;}
+.modal-content{background:var(--panel);color:var(--ink);}
+.alert{border:1px solid var(--border-soft);}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">All Orders</h3>
+    <a href="new-order.html" id="new-order-btn" class="btn btn-dark btn-sm d-none">+ New Order</a>
+  </div>
+  <input type="text" id="search" class="form-control mb-3" placeholder="Search by order no, customer name, or phone">
+  <div class="table-responsive"><table class="table table-hover bg-white">
+    <thead><tr><th>Order No</th><th>Customer</th><th>Garment</th><th>Received</th><th>Due</th><th>Total</th><th>Balance</th><th>Status</th><th>Staff</th></tr></thead>
+    <tbody id="orders-body"></tbody>
+  </table></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---------- Supabase config: update these two lines if the project changes ----------
+const SUPABASE_URL = "https://zyzyatnnzrztdwqujkgl.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5enlhdG5uenJ6dGR3cXVqa2dsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0MTQ3MjksImV4cCI6MjA5OTk5MDcyOX0.-BF4qH0fVfdfxZ9IR1LzNWcFec4A6FIznBryjGywfVU";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function phoneToEmail(phone) {
+  const digits = phone.replace(/\D/g, "");
+  return `${digits}@tailor.local`;
+}
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = "index.html";
+}
+async function getCurrentStaff() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return null;
+  const { data, error } = await sb.from("staff").select("*").eq("id", session.user.id).single();
+  if (error || !data || !data.active) return null;
+  return data;
+}
+async function requireAuth({ adminOnly = false } = {}) {
+  const staff = await getCurrentStaff();
+  if (!staff) { window.location.href = "index.html"; return null; }
+  if (adminOnly && staff.role !== "admin") { window.location.href = "dashboard.html"; return null; }
+  return staff;
+}
+async function getSettings() {
+  const { data } = await sb.from("system_settings").select("*").limit(1).single();
+  return data || { system_name: "Tailor Manager", logo_url: null };
+}
+function orderNo(id) {
+  return String(id).padStart(3, "0");
+}
+
+async function renderNav(staff) {
+  const settings = await getSettings();
+  document.title = settings.system_name;
+  const isAdmin = staff.role === "admin";
+  const showFinancials = isAdmin || settings.workers_can_view_financials;
+  const currentPage = window.location.pathname.split("/").pop();
+
+  const links = [
+    { href: "dashboard.html", label: "Dashboard", show: true },
+    { href: "orders.html", label: "Orders", show: true },
+    { href: "trash.html", label: "Trash", show: true },
+    { href: "new-order.html", label: "+ New Order", show: isAdmin || settings.workers_can_create_orders },
+    { href: "financials.html", label: "Financials", show: showFinancials },
+    { href: "admin.html", label: "Admin Settings", show: isAdmin },
+  ];
+
+  const linksHtml = links.filter(l => l.show).map(l =>
+    `<a class="side-link${currentPage === l.href ? " active" : ""}" href="${l.href}"><span>&#8226;</span> ${l.label}</a>`
+  ).join("");
+
+  const logoHtml = settings.logo_url ? `<img src="${settings.logo_url}" alt="logo">` : "&#9986;";
+
+  const navHtml = `
+    <div class="topbar">
+      <button class="hamburger-btn" id="sidebarToggle">&#9776;</button>
+      <a class="topbar-brand" href="dashboard.html">${logoHtml} ${settings.system_name}</a>
+      <div class="topbar-right">
+        <div class="dropdown">
+          <a class="nav-link position-relative" href="#" id="bell" role="button" data-bs-toggle="dropdown" onclick="markAllAsRead()">
+            &#128276;<span id="badge-count" class="badge rounded-pill bg-danger position-absolute d-none" style="top:0;right:0;font-size:.65rem;"></span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:320px;max-height:400px;overflow-y:auto;" id="notif-dropdown">
+            <li class="text-muted small px-2">Loading...</li>
+          </ul>
+        </div>
+        <a class="nav-link" href="profile.html">${staff.avatar_url ? `<img src="${staff.avatar_url}" height="24" style="border-radius:50%;object-fit:cover;width:24px;">` : ""}</a>
+      </div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="app-sidebar" id="appSidebar">
+      <div class="sidebar-brand">${logoHtml} ${settings.system_name}</div>
+      ${linksHtml}
+      <div class="sidebar-footer">
+        <a class="side-link" href="profile.html">&#8226; ${staff.name} (Profile)</a>
+        <a class="side-link" href="#" onclick="logout()">&#8226; Logout</a>
+      </div>
+    </div>`;
+  document.getElementById("nav-container").innerHTML = navHtml;
+
+  const sbToggle = document.getElementById("sidebarToggle");
+  const sbEl = document.getElementById("appSidebar");
+  const sbOverlay = document.getElementById("sidebarOverlay");
+  function toggleSidebar() { sbEl.classList.toggle("show"); sbOverlay.classList.toggle("show"); }
+  sbToggle.addEventListener("click", toggleSidebar);
+  sbOverlay.addEventListener("click", toggleSidebar);
+  initNotifications(staff.id);
+}
+
+let currentNotifStaffId = null;
+
+async function loadNotifications(staffId) {
+  currentNotifStaffId = staffId;
+  const { data: notes } = await sb.from("notifications").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(15);
+  const { count: unread } = await sb.from("notifications").select("*", { count: "exact", head: true }).eq("staff_id", staffId).eq("is_read", false);
+  const badge = document.getElementById("badge-count");
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove("d-none"); }
+  else { badge.classList.add("d-none"); }
+  const dropdown = document.getElementById("notif-dropdown");
+  if (!notes || notes.length === 0) { dropdown.innerHTML = `<li class="text-muted small px-2">No notifications yet.</li>`; return; }
+  const clearBtn = `<li class="px-2 pb-2 mb-1 border-bottom"><button class="btn btn-sm btn-outline-dark w-100" onclick="clearAllNotifications()">Clear All</button></li>`;
+  dropdown.innerHTML = clearBtn + notes.map(n => `
+    <li class="px-2 py-1 border-bottom ${n.is_read ? "" : "fw-bold"}" style="cursor:pointer;font-size:.85rem;" onclick="openNotification(${n.id}, ${n.order_id ?? "null"})">
+      ${n.message}
+      <div class="small text-muted fw-normal">${new Date(n.created_at).toLocaleString()}</div>
+    </li>`).join("");
+}
+async function openNotification(id, orderId) {
+  await sb.from("notifications").update({ is_read: true }).eq("id", id);
+  window.location.href = orderId ? `order.html?id=${orderId}` : "dashboard.html";
+}
+async function markAllAsRead() {
+  if (!currentNotifStaffId) return;
+  const badge = document.getElementById("badge-count");
+  if (badge) badge.classList.add("d-none");
+  await sb.from("notifications").update({ is_read: true }).eq("staff_id", currentNotifStaffId).eq("is_read", false);
+  loadNotifications(currentNotifStaffId);
+}
+async function clearAllNotifications() {
+  if (!currentNotifStaffId) return;
+  if (!confirm("Clear all notifications? This can't be undone.")) return;
+  await sb.from("notifications").delete().eq("staff_id", currentNotifStaffId);
+  loadNotifications(currentNotifStaffId);
+}
+function initNotifications(staffId) {
+  loadNotifications(staffId);
+  sb.channel("notifications-" + staffId)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `staff_id=eq.${staffId}` }, () => loadNotifications(staffId))
+    .subscribe();
+}
+
+let allOrders = [];
+let showPayments = true;
+
+function renderOrders(list) {
+  document.getElementById("orders-body").innerHTML = list.map(o => {
+    const total_paid = (o.payments || []).reduce((s, p) => s + Number(p.amount), 0);
+    const balance = Number(o.total_amount) - total_paid;
+    const received = new Date(o.date_received).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const due = o.due_date ? new Date(o.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    const statusBadge = o.status === "ready"
+      ? `<span class="badge bg-warning text-dark">Ready for collection</span>`
+      : `<span class="badge bg-secondary">Pending</span>`;
+    const balanceCell = showPayments ? `KES ${balance.toFixed(0)}` : `<span class="text-muted small">Not visible</span>`;
+    return `<tr onclick="window.location='order.html?id=${o.id}'" style="cursor:pointer;">
+      <td>#${orderNo(o.id)}</td>
+      <td>${o.customers.name}<br><small class="text-muted">${o.customers.phone}</small></td>
+      <td>${o.garment_type}</td>
+      <td>${received}</td>
+      <td>${due}</td>
+      <td>KES ${Number(o.total_amount).toFixed(0)}</td>
+      <td>${balanceCell}</td>
+      <td>${statusBadge}</td>
+      <td>${o.staff.name}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="9" class="text-center text-muted p-4">No orders yet.</td></tr>`;
+}
+
+(async () => {
+  const staff = await requireAuth();
+  if (!staff) return;
+  renderNav(staff);
+  if (staff.role === "admin") document.getElementById("new-order-btn").classList.remove("d-none");
+
+  const settings = await getSettings();
+  showPayments = staff.role === "admin" || settings.workers_can_view_payments;
+
+  const { data, error } = await sb
+    .from("orders")
+    .select("*, customers(name,phone), staff:handled_by(name), payments(amount)")
+    .neq("status", "completed")
+    .order("date_received", { ascending: false });
+
+  if (error) { console.error(error); return; }
+  allOrders = data;
+  renderOrders(allOrders);
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const q = e.target.value.toLowerCase();
+    renderOrders(allOrders.filter(o =>
+      o.customers.name.toLowerCase().includes(q) ||
+      o.customers.phone.includes(q) ||
+      orderNo(o.id).includes(q) ||
+      String(o.id).includes(q)
+    ));
+  });
+})();
+</script>
+</body>
+</html>
